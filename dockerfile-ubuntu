@@ -1,0 +1,61 @@
+FROM ubuntu:24.04
+
+RUN apt-get -y update \
+    && apt-get -y install \
+        wget \
+        bash \
+        wget \
+        gcc \
+        tar \
+        build-essential \
+        perl \
+        automake \
+        libtool \
+        autoconf \
+        zlib1g-dev
+
+RUN openssl version
+
+ENV OPENSSL_VERSION="3.4.0"
+
+WORKDIR /opt/openssl
+
+# Download openssl
+RUN set -x \
+  && wget --no-check-certificate -O openssl-${OPENSSL_VERSION}.tar.gz "https://github.com/openssl/openssl/archive/refs/tags/openssl-${OPENSSL_VERSION}.tar.gz" \
+  && tar -xvf openssl-${OPENSSL_VERSION}.tar.gz \
+  && rm -rf openssl-${OPENSSL_VERSION}.tar.gz \
+  && cd  openssl-openssl-${OPENSSL_VERSION}
+
+# Configure and build OpenSSL
+RUN cd openssl-openssl-${OPENSSL_VERSION} \
+    && ./config shared zlib\
+    #--prefix=/usr/local/openssl --openssldir=/usr/local/openssl shared zlib \
+    && make \
+    && make test \
+    && make install
+    # && ldconfig
+
+RUN rm -rf /opt/openssl/openssl-openssl-${OPENSSL_VERSION} \
+RUN export LD_LIBRARY_PATH=
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV PATH=/usr/local/bin:$PATH
+
+
+ENV SOFTHSM_VERSION="2.6.1"
+
+# Download softhsm
+RUN set -x \
+  && wget --no-check-certificate -O softhsm-${SOFTHSM_VERSION}.tar.gz "https://github.com/softhsm/SoftHSMv2/archive/refs/tags/${SOFTHSM_VERSION}.tar.gz" \
+  && tar -xvf softhsm-${SOFTHSM_VERSION}.tar.gz \
+  && rm -rf softhsm-${SOFTHSM_VERSION}.tar.gz \
+  && cd SoftHSMv2-${SOFTHSM_VERSION}
+
+# Compile SoftHSMv2
+RUN cd SoftHSMv2-${SOFTHSM_VERSION} \
+    && sh autogen.sh \
+    && ./configure --prefix=/usr/local \
+    && make \
+    && make install
+
+RUN rm -fr SoftHSMv2-${SOFTHSM_VERSION}
